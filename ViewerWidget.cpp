@@ -124,9 +124,11 @@ void ViewerWidget::drawLine(QPoint start, QPoint end, QColor color, int algType)
 	if (!croppedBySutherlandHodgman) {
 		QVector<QPoint> newPoints = cyrusBeck(start, end);
 		if (newPoints.isEmpty()) {
+			qDebug() << "drawing line: none";
 			return;
 		}
 		else {
+			qDebug() << "drawing line: " << start << end;
 			start = newPoints[0];
 			end = newPoints[1];
 		}
@@ -418,21 +420,12 @@ void ViewerWidget::drawLineBresenham(QPoint start, QPoint end, QColor color) {
 }
 void ViewerWidget::drawPolygon(QVector<QPoint> points, QColor color, int algType, int fillingAlgType) {
 	QVector<QPoint> tmpPoints = sutherlandHodgman(points);
-	QVector<QPoint> oldPoints = points;
-	if (!tmpPoints.isEmpty()) {
-		points = tmpPoints;
-		if (points.length() <= 2) {
-			qDebug() << "no polygon to draw";
-			return;
-		}
+	if (tmpPoints.isEmpty() || points.length() <= 2) {
+		qDebug() << "drawing polygon : none";
+		return;
 	}
-	else {
-		qDebug() << "no polygon to draw";
-		return; 
-	}
-	qDebug() << "----------DRAWING-POLYGON-----------";
-	qDebug() << points;
-	qDebug() << "------------------------------------";
+	qDebug() << "drawing polygon : " << points;
+	points = tmpPoints;
 	croppedBySutherlandHodgman = true;
 	if (fillingAlgType == 0) {
 		for (int i = 0; i < points.length(); i++) {
@@ -453,7 +446,7 @@ void ViewerWidget::drawPolygon(QVector<QPoint> points, QColor color, int algType
 	croppedBySutherlandHodgman = false;
 }
 void ViewerWidget::scanLinePolygon(QVector<QPoint> points, QColor color) {
-	struct Edge {
+	struct Edge {											// structura obsahuje informacie o krivke
 		QPoint start;
 		QPoint end;
 		int deltaY = 0;
@@ -464,16 +457,16 @@ void ViewerWidget::scanLinePolygon(QVector<QPoint> points, QColor color) {
 	QPoint end = QPoint();
 	for (int i = 0; i < points.length(); i++) {
 		end = points[i];
-		if (start.y() > end.y()) {					// usporiadanie krivky z hora dole
+		if (start.y() > end.y()) {							// usporiadanie krivky z hora dole
 			std::swap(start, end);
 		}
-		if (end.y() != start.y()) {
+		if (end.y() != start.y()) {							// vynechanie horizontalnych hran
 			Edge line;
 			line.start = start;
-			line.end = QPoint(end.x(),end.y() - 1);
+			line.end = QPoint(end.x(),end.y() - 1);			// skratenie hrany o 1 px
 			line.deltaY = line.end.y() - line.start.y();
 			if (line.end.x() == line.start.x()) {
-				line.m = -DBL_MAX;
+				line.m = -DBL_MAX;							// prevencia pred delenim nulou
 			}
 			else {
 				line.m = line.deltaY / static_cast<double>(line.end.x() - line.start.x());
@@ -484,15 +477,15 @@ void ViewerWidget::scanLinePolygon(QVector<QPoint> points, QColor color) {
 		}
 		start = points[i];
 	}
-	std::sort(e.begin(), e.end(), [](const Edge &line1, const Edge &line2) {	//sortovanie hran podla ich zaciatocnej suradnice
-		return line1.start.y() < line2.start.y();
+	std::sort(e.begin(), e.end(), [](const Edge &line1, const Edge &line2) {	
+		return line1.start.y() < line2.start.y();			// sortovanie hran podla ich zaciatocnej suradnice
 		});
 	int ymin = e[0].start.y();
 	int ymax = ymin;
 	int y = ymin;
 	for (const Edge& element : e) {
 		if (element.end.y() > ymax) {
-			ymax = element.end.y();
+			ymax = element.end.y();							// stanovenie Maximalnej y suradnice
 		}
 	}
 	QVector<QVector<Edge>> edgeTable = QVector<QVector<Edge>>(ymax - ymin + 1);
@@ -510,7 +503,7 @@ void ViewerWidget::scanLinePolygon(QVector<QPoint> points, QColor color) {
 			return (y - line1.start.y()) / line1.m + line1.start.x() < (y - line2.start.y()) / line2.m + line2.start.x();
 			});
 		if (eActive.length() % 2 == 0) {
-			for (int j = 0; j < eActive.length(); j += 2) {    //tento for sposobuje casovu zlozitost
+			for (int j = 0; j < eActive.length(); j += 2) {
 				int xIntercept1 = static_cast<int>((y - eActive[j].start.y()) / eActive[j].m) + eActive[j].start.x();
 				int xIntercept2 = static_cast<int>((y - eActive[j + 1].start.y()) / eActive[j + 1].m) + eActive[j + 1].start.x();
 				if (bool state = xIntercept1 != xIntercept2) {
@@ -533,7 +526,6 @@ void ViewerWidget::scanLinePolygon(QVector<QPoint> points, QColor color) {
 		}
 		y++;
 	}
-
 	update();
 }
 void ViewerWidget::fillTriangleSetup(QVector<QPoint> points, QColor color,int fillAlgType) {
@@ -653,15 +645,26 @@ void ViewerWidget::drawCurve(QVector<QPair<QPoint, QPoint>> points, QColor color
 	if (algType == 0) {
 		drawCurveHermint(points, color);
 	}
-	else if (algType == 1) {
+	else {
 		QVector<QPoint> vectorOfPoints;
 		for (int i = 0; i < points.length(); i++) {
 			vectorOfPoints.append(points[i].first);
 		}
-		drawCurveCasteljau(vectorOfPoints, color);
+		if (algType == 1) {
+			drawCurveCasteljau(vectorOfPoints, color);
+		}
+		else {
+			drawCurveCoons(vectorOfPoints, color);
+		}
 	}
 }
 void ViewerWidget::drawCurveHermint(QVector<QPair<QPoint, QPoint>> points, QColor color) {
+	auto cubicPolynoms = [](double t) ->QVector<double> {
+		return { 2 * pow(t,3) - 3 * pow(t,2) + 1 ,
+				-2 * pow(t,3) + 3 * pow(t,2),
+				 pow(t,3) - 2 * pow(t,2) + t,
+				 pow(t,3) - pow(t,2) };
+		};
 	double deltaT = 0.05;
 	int n = points.length();
 	QVector<QPair<QPoint, QPoint>> P = points;
@@ -671,10 +674,7 @@ void ViewerWidget::drawCurveHermint(QVector<QPair<QPoint, QPoint>> points, QColo
 	for (int i = 1; i < n; i++) {
 		Q0 = P[i - 1].first;
 		for (double t = deltaT; t < 1; t += deltaT) {
-			double F[4] = { 2 * pow(t,3) - 3 * pow(t,2) + 1 ,
-						-2 * pow(t,3) + 3 * pow(t,2),
-						pow(t,3) - 2 * pow(t,2) + t,
-						pow(t,3) - pow(t,2) };
+			QVector<double> F = cubicPolynoms(t);
 			Q1 = P[i - 1].first * F[0] + P[i].first * F[1] + P[i - 1].second * F[2] + P[i].second * F[3];
 			drawLine(QPoint(static_cast<int> (Q0.x()),static_cast<int>(Q0.y())), QPoint(static_cast<int> (Q1.x()), static_cast<int>(Q1.y())), color, 1);
 			Q0 = Q1;
@@ -697,7 +697,7 @@ void ViewerWidget::drawCurveCasteljau(QVector<QPoint> points, QColor color) {
 		P[i] = QVector<QPoint>(n - i);
 	}
 	P[0] = points;
-	double deltaT = 0.01;
+	double deltaT = 0.025;
 	QPoint Q0 = P[0][0];
 	QPoint Q1 = QPoint();
 	for (double t = deltaT; t <= 1; t += deltaT) {
@@ -713,6 +713,36 @@ void ViewerWidget::drawCurveCasteljau(QVector<QPoint> points, QColor color) {
 	drawLine(QPoint(static_cast<int> (Q0.x()), static_cast<int>(Q0.y())), P[0][n - 1], color, 1);
 	for (int i = 0; i < n; i++) {
 		drawCircleBresenham(points[i], points[i] + QPoint(0, 2), Qt::red);
+	}
+	update();
+}
+void ViewerWidget::drawCurveCoons(QVector<QPoint> points, QColor color) {
+	auto cubicPolynoms = [](double t)->QVector<double> {						// Lambda funckia ktora vracia vektor hodnotu polynomov v case t
+		return { -pow(t,3) / 6 + pow(t,2) / 2 - t / 2 + 1. / 6,
+				  pow(t,3) / 2 - pow(t,2) + 2. / 3,
+				 -pow(t,3) / 2 + pow(t,2) / 2 + t / 2 + 1. / 6,
+				  pow(t,3) / 6 };
+		};
+	QVector<QPoint> P = points;
+	int n = points.length();
+	double deltaT = 0.05;
+	QPoint Q0 = QPoint();
+	QPoint Q1 = QPoint();
+	for (int i = 3; i < n; i++) {
+		QVector<double> B = cubicPolynoms(0);
+		Q0 = P[i - 3] * B[0] + P[i - 2] * B[1] + P[i - 1] * B[2] + P[i] * B[3];
+		if (i > 3) {
+			drawLine(QPoint(static_cast<int> (Q1.x()), static_cast<int>(Q1.y())), QPoint(static_cast<int> (Q0.x()), static_cast<int>(Q0.y())) , color, 1);
+		}
+		for (double t = deltaT; t <= 1; t += deltaT) {
+			B = cubicPolynoms(t);
+			Q1 = P[i - 3] * B[0] + P[i - 2] * B[1] + P[i - 1] * B[2] + P[i] * B[3];
+			drawLine(QPoint(static_cast<int> (Q0.x()), static_cast<int>(Q0.y())), QPoint(static_cast<int> (Q1.x()), static_cast<int>(Q1.y())), color, 1);
+			Q0 = Q1;
+		}
+	}
+	for (const QPoint& point : points) {
+		drawCircleBresenham(point, point + QPoint(0, 2), Qt::red);
 	}
 	update();
 }
@@ -763,7 +793,7 @@ QVector<QPoint> ViewerWidget::sutherlandHodgman(QVector<QPoint> V) {
 	QVector<QPoint> W;
 	QPoint S = V.last();
 	int xMin = 0;
-	int x[4] = {0, 0, -img->width(), -img->height()};
+	int x[4] = {0, 0, -img->width(), -img->height()};				// inicializacia pola hodnot xmin pre jednotlive hrany orezavania
 	for (int j = 0; j < 4; j++) {
 		xMin = x[j];
 		for (int i = 0; i < V.length(); i++) {

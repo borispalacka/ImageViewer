@@ -25,7 +25,7 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>709</width>
+         <width>708</width>
          <height>571</height>
         </rect>
        </property>
@@ -192,6 +192,11 @@
           <item>
            <property name="text">
             <string>Bezier</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Coons Cubic B-Spline</string>
            </property>
           </item>
          </widget>

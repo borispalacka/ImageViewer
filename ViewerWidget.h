@@ -62,6 +62,7 @@ public:
 	void drawCurve(QVector<QPair<QPoint, QPoint>> points, QColor color, int algType);
 	void drawCurveHermint(QVector<QPair<QPoint, QPoint>> points, QColor color);
 	void drawCurveCasteljau(QVector<QPoint> points, QColor color);
+	void drawCurveCoons(QVector<QPoint> points, QColor color);
 
 	QVector <QPoint> cyrusBeck(QPoint P1, QPoint P2);
 	QVector <QPoint> sutherlandHodgman(QVector<QPoint> V);

@@ -5,7 +5,7 @@ ImageViewer::ImageViewer(QWidget* parent)
 	: QMainWindow(parent), ui(new Ui::ImageViewerClass)
 {
 	ui->setupUi(this);
-	vW = new ViewerWidget(QSize(500, 500));
+	vW = new ViewerWidget(QSize(1500, 750));
 	ui->scrollArea->setWidget(vW);
 	ui->scrollArea->setBackgroundRole(QPalette::Dark);
 	ui->scrollArea->setWidgetResizable(true);
@@ -118,7 +118,11 @@ void ImageViewer::ViewerWidgetMouseButtonPress(ViewerWidget* w, QEvent* event)
 	else if (e->button() == Qt::LeftButton && ui->toolButtonDrawCurve->isChecked() && ui->toolButtonDrawCurve->isEnabled()){
 		QPair<QPoint, QPoint> vector = { e->pos(),e->pos() - QPoint(0, 100) };
 		w->getDrawCurveMasterPoints().append(vector);
-		if (w->getDrawCurveMasterPoints().length() >= 2) {
+		ui->comboBoxCurveAlg->setEnabled(false);
+		if (w->getDrawCurveMasterPoints().length() >= 2 && ui->comboBoxCurveAlg->currentIndex() != 2) {
+			w->setDrawCurveActivated(true);
+		}
+		else if (w->getDrawCurveMasterPoints().length() >= 4 && ui->comboBoxCurveAlg->currentIndex() == 2) {
 			w->setDrawCurveActivated(true);
 		}
 	}
@@ -620,6 +624,7 @@ void ImageViewer::on_actionClear_triggered()
 	ui->toolButtonDrawLine->setEnabled(true);
 	ui->toolButtonDrawPolygon->setEnabled(true);
 	ui->toolButtonDrawCurve->setEnabled(true);
+	ui->comboBoxCurveAlg->setEnabled(true);
 	ui->toolButtonDrawCircle->setChecked(false);
 	ui->toolButtonDrawLine->setChecked(false);
 	ui->toolButtonDrawPolygon->setChecked(false);
