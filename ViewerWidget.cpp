@@ -128,132 +128,19 @@ void ViewerWidget::drawLine(QPoint start, QPoint end, QColor color, int algType)
 			return;
 		}
 		else {
-			qDebug() << "drawing line: " << start << end;
 			start = newPoints[0];
 			end = newPoints[1];
+			qDebug() << "drawing line: " << start << end;
 		}
 	}
-
 	if (algType == 0) { //DDA
 		drawLineDDA(start, end, color);
 	}
 	else if (algType == 1) { //Bresenham
-		//drawLineBresenham(start, end, color);
-		if (start.x() == end.x()) {
-			if (start.y() > end.y()) {
-				std::swap(start, end);
-			}
-			for (int y = start.y(); y <= end.y(); y++) {
-				if (isInside(start.x(), y)) {
-					setPixel(start.x(), y, color);
-				}
-			}
-			return;
-		}
-		double m = (static_cast<double>(end.y()) - static_cast<double>(start.y())) / (static_cast<double>(end.x()) - static_cast<double>(start.x()));
-		if (abs(m) <= 1) {  //riadiaca os X
-			if (start.x() > end.x()) {
-				std::swap(start, end);
-			}
-			int twoDeltaX = 2 * (end.x() - start.x());
-			int twoDeltaY = 2 * (end.y() - start.y());
-			if (0 < m && m <= 1) {
-				int y = start.y();
-				int pCurrent = twoDeltaY - twoDeltaX / 2;
-				int k1 = twoDeltaY;
-				int k2 = twoDeltaY - twoDeltaX;
-				if (isInside(start.x(), start.y())) {
-					setPixel(start.x(), start.y(), color);
-				}
-				for (int x = start.x(); x <= end.x(); x++) {
-					if (pCurrent > 0) {
-						y++;
-						pCurrent += k2;
-					}
-					else {
-						pCurrent += k1;
-					}
-					if (isInside(x, y)) {
-						setPixel(x, y, color);
-					}
-				}
-			}
-			else {
-				int y = start.y();
-				int pCurrent = twoDeltaY + twoDeltaX / 2;
-				int k1 = twoDeltaY;
-				int k2 = twoDeltaY + twoDeltaX;
-				if (isInside(start.x(), start.y())) {
-					setPixel(start.x(), start.y(), color);
-				}
-				for (int x = start.x(); x <= end.x(); x++) {
-					if (pCurrent < 0) {
-						y--;
-						pCurrent += k2;
-					}
-					else {
-						pCurrent += k1;
-					}
-					if (isInside(x, y)) {
-						setPixel(x, y, color);
-					}
-				}
-			}
-			
-		}
-		else { // riadiaca os Y
-			if (start.y() > end.y()) {
-				std::swap(start, end);
-			}
-			int twoDeltaX = 2 * (end.x() - start.x());
-			int twoDeltaY = 2 * (end.y() - start.y());
-			if (m > 1) {
-				int x = start.x();
-				int pCurrent = twoDeltaX - twoDeltaY / 2;
-				int k1 = twoDeltaX;
-				int k2 = twoDeltaX - twoDeltaY;
-				if (isInside(start.x(), start.y())) {
-					setPixel(start.x(), start.y(), color);
-				}
-				for (int y = start.y(); y <= end.y(); y++) {
-					if (pCurrent > 0) {
-						x++;
-						pCurrent += k2;
-					}
-					else {
-						pCurrent += k1;
-					}
-					if (isInside(x, y)) {
-						setPixel(x, y, color);
-					}
-				}
-			}
-			else {
-				int x = start.x();
-				int pCurrent = twoDeltaX + twoDeltaY / 2;
-				int k1 = twoDeltaX;
-				int k2 = twoDeltaX + twoDeltaY;
-				if (isInside(start.x(), start.y())) {
-					setPixel(start.x(), start.y(), color);
-				}
-				for (int y = start.y(); y <= end.y(); y++) {
-					if (pCurrent < 0) {
-						x--;
-						pCurrent += k2;
-					}
-					else {
-						pCurrent += k1;
-					}
-					if (isInside(x, y)) {
-						setPixel(x, y, color);
-					}
-				}
-			}
-			
-		}
+		drawLineBresenham(start, end, color);
 	}
-	//drawCircleBresenham(start, start + QPoint(0, 2), Qt::red);
-	//drawCircleBresenham(end, end + QPoint(0, 2), Qt::red);
+	drawCircleBresenham(start, start + QPoint(0, 2), Qt::red);
+	drawCircleBresenham(end, end + QPoint(0, 2), Qt::red);
 	update();
 }
 void ViewerWidget::drawCircleBresenham(QPoint start, QPoint end, QColor color) {
@@ -346,37 +233,39 @@ void ViewerWidget::drawLineBresenham(QPoint start, QPoint end, QColor color) {
 		return;
 	}
 	double m = (static_cast<double>(end.y()) - static_cast<double>(start.y())) / (static_cast<double>(end.x()) - static_cast<double>(start.x()));
-	int tmp = 2;
-	if (abs(m) <= 1) {  //riadiaca os X
+	int tmp = 0;
+	if (abs(m) <= 1) {									// riadiaca os X
 		if (start.x() > end.x()) {
 			std::swap(start, end);
 		}
 		int twoDeltaX = 2 * (end.x() - start.x());
 		int twoDeltaY = 2 * (end.y() - start.y());
-		if (m < 0 && m <= 1) {
+		if (0 < m  && m <= 1) {
 			tmp = -1;
 		}
 		else {
 			tmp = 1;
 		}
-		int y = start.y();
-		int pCurrent = twoDeltaY + tmp * twoDeltaX / 2;
 		int k1 = twoDeltaY;
 		int k2 = twoDeltaY + tmp * twoDeltaX;
-		setPixel(start.x(), start.y(), color);
+		int pCurrent = twoDeltaY + tmp * twoDeltaX / 2;
+		int y = start.y();
+		if (isInside(start.x(), start.y())) {
+			setPixel(start.x(), start.y(), color);
+		}
 		for (int x = start.x(); x <= end.x(); x++) {
 
-			if (tmp == -1) {
+			if (tmp == -1) {							// m patri ]0,1]
 				if (pCurrent > 0) {
-					y ++;
+					y++;
 					pCurrent += k2;
 				}
 				else {
 					pCurrent += k1;
 				}
 			}
-			else {
-				if (pCurrent > 0) {
+			else {										// m patri [-1,0]
+				if (pCurrent < 0) {
 					y--;
 					pCurrent += k2;
 				}
@@ -384,12 +273,13 @@ void ViewerWidget::drawLineBresenham(QPoint start, QPoint end, QColor color) {
 					pCurrent += k1;
 				}
 			}
-			
-			setPixel(x, y, color);
+			if (isInside(x, y)) {
+				setPixel(x, y, color);
+			}
 		}
 
 	}
-	else { // riadiaca os Y
+	else {												// riadiaca os Y
 		if (start.y() > end.y()) {
 			std::swap(start, end);
 		}
@@ -405,16 +295,31 @@ void ViewerWidget::drawLineBresenham(QPoint start, QPoint end, QColor color) {
 		int pCurrent = twoDeltaX + tmp * twoDeltaY / 2;
 		int k1 = twoDeltaX;
 		int k2 = twoDeltaX + tmp * twoDeltaY;
-		setPixel(start.x(), end.x(), color);
+		if (isInside(start.x(), start.y())) {
+			setPixel(start.x(), start.y(), color);
+		}
 		for (int y = start.y(); y <= end.y(); y++) {
-			if (pCurrent > 0) {
-				x -= tmp;
-				pCurrent += k2;
+			if (tmp == -1) {							// m > 1
+				if (pCurrent > 0) {
+					x++;
+					pCurrent += k2;
+				}
+				else {
+					pCurrent += k1;
+				}
 			}
-			else {
-				pCurrent += k1;
+			else {										// m < -1 
+				if (pCurrent < 0) {
+					x--;
+					pCurrent += k2;
+				}
+				else {
+					pCurrent += k1;
+				}
 			}
-			setPixel(x, y, color);
+			if (isInside(x, y)) {
+				setPixel(x, y, color);
+			}
 		}
 	}
 }
