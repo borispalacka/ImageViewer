@@ -5,7 +5,7 @@ ImageViewer::ImageViewer(QWidget* parent)
 	: QMainWindow(parent), ui(new Ui::ImageViewerClass)
 {
 	ui->setupUi(this);
-	vW = new ViewerWidget(QSize(1500, 750));
+	vW = new ViewerWidget(QSize(500, 500));
 	ui->scrollArea->setWidget(vW);
 	ui->scrollArea->setBackgroundRole(QPalette::Dark);
 	ui->scrollArea->setWidgetResizable(true);
@@ -101,6 +101,7 @@ void ImageViewer::ViewerWidgetMouseButtonPress(ViewerWidget* w, QEvent* event)
 	}
 	else if (e->button() == Qt::LeftButton && ui->toolButtonDrawPolygon->isChecked() && ui->toolButtonDrawPolygon->isEnabled()) {
 		w->getDrawPolygonPoints().append(e->pos());
+		w->drawCircleBresenham(e->pos(), e->pos() + QPoint(0, 2), Qt::black);
 		if (w->getDrawPolygonPoints().length() >= 3) {
 			w->setDrawPolygonActivated(true);
 		}
@@ -515,12 +516,13 @@ void ImageViewer::on_spinBoxShearFactor_valueChanged(double value) {
 	}
 	else if (ui->toolButtonDrawPolygon->isChecked()) {
 		QVector<QPoint> shearedPoints;
-		for (int i = 0; i < vW->getDrawPolygonPoints().length(); i++) {
+		shearedPoints.append(vW->getDrawPolygonPoints().first());
+		for (int i = 1; i < vW->getDrawPolygonPoints().length(); i++) {
 			int x = vW->getDrawPolygonPoints()[i].x() + vW->getDrawPolygonPoints()[i].y() * value;
 			shearedPoints.append(QPoint(x, vW->getDrawPolygonPoints()[i].y()));
 		}
 		vW->clear();
-		vW->drawPolygon(shearedPoints, globalColor, ui->comboBoxLineAlg->currentIndex());
+		vW->drawPolygon(shearedPoints, globalColor, ui->comboBoxLineAlg->currentIndex(), ui->comboBoxFillingAlg->currentIndex());
 	}
 	vW->update();
 }
@@ -532,7 +534,8 @@ void ImageViewer::on_spinBoxShearFactor_editingFinished() {
 	}
 	else if (ui->toolButtonDrawPolygon->isChecked()) {
 		QVector<QPoint> shearedPoints;
-		for (int i = 0; i < vW->getDrawPolygonPoints().length(); i++) {
+		shearedPoints.append(vW->getDrawPolygonPoints()[0]);
+		for (int i = 1; i < vW->getDrawPolygonPoints().length(); i++) {
 			int x = vW->getDrawPolygonPoints()[i].x() + vW->getDrawPolygonPoints()[i].y() * value;
 			shearedPoints.append(QPoint(x, vW->getDrawPolygonPoints()[i].y()));
 		}

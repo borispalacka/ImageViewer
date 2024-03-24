@@ -139,8 +139,8 @@ void ViewerWidget::drawLine(QPoint start, QPoint end, QColor color, int algType)
 	else if (algType == 1) { //Bresenham
 		drawLineBresenham(start, end, color);
 	}
-	drawCircleBresenham(start, start + QPoint(0, 2), Qt::red);
-	drawCircleBresenham(end, end + QPoint(0, 2), Qt::red);
+	//drawCircleBresenham(start, start + QPoint(0, 2), Qt::red);
+	//drawCircleBresenham(end, end + QPoint(0, 2), Qt::red);
 	update();
 }
 void ViewerWidget::drawCircleBresenham(QPoint start, QPoint end, QColor color) {
@@ -325,12 +325,12 @@ void ViewerWidget::drawLineBresenham(QPoint start, QPoint end, QColor color) {
 }
 void ViewerWidget::drawPolygon(QVector<QPoint> points, QColor color, int algType, int fillingAlgType) {
 	QVector<QPoint> tmpPoints = sutherlandHodgman(points);
-	if (tmpPoints.isEmpty() || points.length() <= 2) {
+	if (tmpPoints.isEmpty() || tmpPoints.length() <= 2) {
 		qDebug() << "drawing polygon : none";
 		return;
 	}
-	qDebug() << "drawing polygon : " << points;
 	points = tmpPoints;
+	qDebug() << "drawing polygon : " << points;
 	croppedBySutherlandHodgman = true;
 	if (fillingAlgType == 0) {
 		for (int i = 0; i < points.length(); i++) {
@@ -347,6 +347,9 @@ void ViewerWidget::drawPolygon(QVector<QPoint> points, QColor color, int algType
 	}
 	else {
 		scanLinePolygon(points, color);
+	}
+	for (const QPoint& point : points) {
+		drawCircleBresenham(point, point + QPoint(0, 1), Qt::red);
 	}
 	croppedBySutherlandHodgman = false;
 }
@@ -368,7 +371,7 @@ void ViewerWidget::scanLinePolygon(QVector<QPoint> points, QColor color) {
 		if (end.y() != start.y()) {							// vynechanie horizontalnych hran
 			Edge line;
 			line.start = start;
-			line.end = QPoint(end.x(),end.y() - 1);			// skratenie hrany o 1 px
+			line.end = QPoint(end.x(), end.y() - 1);			// skratenie hrany o 1 px
 			line.deltaY = line.end.y() - line.start.y();
 			if (line.end.x() == line.start.x()) {
 				line.m = -DBL_MAX;							// prevencia pred delenim nulou
@@ -381,6 +384,17 @@ void ViewerWidget::scanLinePolygon(QVector<QPoint> points, QColor color) {
 			}
 		}
 		start = points[i];
+	}
+	if (e.isEmpty()) {
+		return;
+		qDebug() << "no polygon to draw";
+	}
+	bool isVerticalLine = std::all_of(e.begin(), e.end(),[startX = e.first().start.x()](const Edge& edge) {
+		return edge.start.x() == startX && edge.end.x() == startX;
+		});
+	if (isVerticalLine) {
+		return;
+		qDebug() << "no polygon to draw";
 	}
 	std::sort(e.begin(), e.end(), [](const Edge &line1, const Edge &line2) {	
 		return line1.start.y() < line2.start.y();			// sortovanie hran podla ich zaciatocnej suradnice
@@ -397,6 +411,9 @@ void ViewerWidget::scanLinePolygon(QVector<QPoint> points, QColor color) {
 	QVector<Edge> eActive;
 	for (const Edge& element : e) {
 		int tableIndex = element.start.y() - ymin;
+		if (tableIndex >= edgeTable.length()) {
+			qDebug() << "hooops";
+		}
 		edgeTable[tableIndex].append(element);
 	}
 	for (int i = 0; i < edgeTable.length(); i++) {
@@ -504,9 +521,6 @@ void ViewerWidget::fillTriangle(QVector<QPoint> currentPoints, QVector<QPoint> o
 		}
 		x1 += 1 / edges[0].m;
 		x2 += 1 / edges[1].m;
-	}
-	for (int i = 0; i < currentPoints.length(); i++) {
-		drawCircleBresenham(currentPoints[i], QPoint(currentPoints[i].x(), currentPoints[i].y() + 1), Qt::black);
 	}
 	update();
 }
@@ -652,8 +666,9 @@ void ViewerWidget::drawCurveCoons(QVector<QPoint> points, QColor color) {
 	update();
 }
 
+//Crop functions
 QVector<QPoint> ViewerWidget::cyrusBeck(QPoint P1, QPoint P2) {
-	if (isInside(P1.x(), P1.y()) || isInside(P2.x(), P2.y()) || true) {
+	if (!isInside(P1.x(), P1.y()) || !isInside(P2.x(), P2.y())) {
 		double tMin = 0;
 		double tMax = 1;
 		QPoint vectorD = P2 - P1;
@@ -683,16 +698,18 @@ QVector<QPoint> ViewerWidget::cyrusBeck(QPoint P1, QPoint P2) {
 				}
 			}
 		}
-		if (tMin == 0 && tMax == 1) {
-			return { P1,P2 };
-		}
-		else if (tMin < tMax) {
+		if (tMin < tMax) {
 			QPoint newP1 = P1 + (P2 - P1) * tMin;
 			QPoint newP2 = P1 + (P2 - P1) * tMax;
 			return { newP1, newP2 };
 		}
+		else {
+			return QVector<QPoint>();
+		}
 	}
-	return { P1, P2 };
+	else {
+		return { P1, P2 };
+	}
 }
 QVector<QPoint> ViewerWidget::sutherlandHodgman(QVector<QPoint> V) {
 	QVector<QPoint> W;
