@@ -599,13 +599,13 @@ void ViewerWidget::drawCurveHermint(QVector<QPair<QPoint, QPoint>> points, QColo
 			Q0 = Q1;
 			k++;
 		}
-		qDebug() << "interations :" << k;
 		k = 0;
 		drawLine(QPoint(static_cast<int> (Q0.x()), static_cast<int>(Q0.y())), P[i].first, color, 1);
 	}
 	for (int i = 0; i < P.length(); i++) {
 		drawLine(P[i].first, P[i].second, Qt::red, 1);
-		drawCircleBresenham(P[i].first, P[i].first + QPoint(0, 1), Qt::black);
+		drawCircleBresenham(P[i].first, P[i].first + QPoint(0, 2), Qt::red);
+		drawCircleBresenham(P[i].second, P[i].second + QPoint(0, 2), Qt::red);
 	}
 	update();
 }
